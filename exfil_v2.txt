@@ -32,7 +32,7 @@ HTTP/$($response.ProtocolVersion) $($response.StatusCode.value__) $($response.St
 ResponseURI : $($response.responseUri)
 Date        : $($response.Headers.Get('Date'))
 "@
-            $obj = New-Object PSObject -Property ([ordered]@{'Request'= $request_str; 'Response' = $response_str})
+            $obj = New-Object PSObject -Property (@{'Request'= $request_str; 'Response' = $response_str})
             $obj
             
             $stream = New-Object System.IO.StreamReader $response.GetResponseStream()
@@ -79,7 +79,7 @@ HTTP/$($response.ProtocolVersion) $($response.StatusCode.value__) $($response.St
 ResponseURI : $($response.responseUri)
 Date: $($response.Headers.Get('Date'))
 "@
-            $obj = New-Object PSObject -Property ([ordered]@{'Request'= $request_str; 'Response' = $response_str})
+            $obj = New-Object PSObject -Property (@{'Request'= $request_str; 'Response' = $response_str})
             $obj
 
             
